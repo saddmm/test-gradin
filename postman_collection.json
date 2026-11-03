@@ -1,0 +1,529 @@
+{
+	"info": {
+		"_postman_id": "courier-api-collection-v1",
+		"name": "Courier API - Laravel 13",
+		"description": "Postman Collection with automated test scripts for Courier Management RESTful API technical test built with Laravel 13.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Couriers",
+			"item": [
+				{
+					"name": "1. Create Courier (Store)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const randomId = Math.floor(1000 + Math.random() * 9000);",
+									"pm.environment.set('random_code', 'CR-' + randomId);",
+									"pm.environment.set('random_email', 'courier.' + randomId + '@example.com');",
+									"pm.environment.set('random_phone', '+62812' + randomId + Math.floor(1000 + Math.random() * 9000));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 201 Created', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has valid courier structure', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data.code).to.eql(pm.environment.get('random_code'));",
+									"    pm.expect(jsonData.data.name).to.eql('Budiono Hadi Agung');",
+									"    pm.expect(jsonData.data.level).to.eql(3);",
+									"    pm.expect(jsonData.data.is_active).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('registered_at');",
+									"    ",
+									"    // Save ID for subsequent tests in collection runner",
+									"    pm.environment.set('created_courier_id', jsonData.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"{{random_code}}\",\n    \"name\": \"Budiono Hadi Agung\",\n    \"email\": \"{{random_email}}\",\n    \"phone\": \"{{random_phone}}\",\n    \"vehicle_type\": \"motorcycle\",\n    \"license_plate\": \"B 1234 ABC\",\n    \"level\": 3,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/couriers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers"
+							]
+						},
+						"description": "Create a new courier and store its ID into environment variables for subsequent tests."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Create Courier - Validation Error (Level > 5)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 422 Unprocessable Content', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Validation errors returned for level and vehicle_type', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"    pm.expect(jsonData.errors).to.have.property('level');",
+									"    pm.expect(jsonData.errors).to.have.property('vehicle_type');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"CR-INVALID\",\n    \"name\": \"Invalid Courier\",\n    \"email\": \"invalid@example.com\",\n    \"phone\": \"+62800000000\",\n    \"vehicle_type\": \"airplane\",\n    \"license_plate\": \"B 9999 ERR\",\n    \"level\": 6\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/couriers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers"
+							]
+						},
+						"description": "Validation test: checks that invalid vehicle enum and level out of bounds (6) return HTTP 422."
+					},
+					"response": []
+				},
+				{
+					"name": "3. List Couriers (Default Pagination & Sort)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains pagination meta and links', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData).to.have.property('meta');",
+									"    pm.expect(jsonData).to.have.property('links');",
+									"    pm.expect(jsonData.meta.per_page).to.eql(15);",
+									"    pm.expect(Array.isArray(jsonData.data)).to.be.true;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/couriers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers"
+							]
+						},
+						"description": "Fetch paginated couriers with default pagination (15 items) and default order by name ASC."
+					},
+					"response": []
+				},
+				{
+					"name": "4. List Couriers - Search & Filter & Sort",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Filtered results match token search and level', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    ",
+									"    jsonData.data.forEach(function (courier) {",
+									"        // Every item returned must contain both 'budi' and 'agung' (case-insensitive)",
+									"        const nameLower = courier.name.toLowerCase();",
+									"        pm.expect(nameLower).to.include('budi');",
+									"        pm.expect(nameLower).to.include('agung');",
+									"        ",
+									"        // Level must be either 2 or 3",
+									"        pm.expect([2, 3]).to.include(courier.level);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/couriers?search=budi+agung&level=2,3&sort_by=registered_at&sort_dir=desc&per_page=10&page=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "budi+agung",
+									"description": "Multi-token search on name using AND logic"
+								},
+								{
+									"key": "level",
+									"value": "2,3",
+									"description": "Filter by comma-separated levels (1 to 5)"
+								},
+								{
+									"key": "sort_by",
+									"value": "registered_at",
+									"description": "Sort column (name, registered_at, created_at, level, code)"
+								},
+								{
+									"key": "sort_dir",
+									"value": "desc",
+									"description": "Sort direction (asc or desc)"
+								},
+								{
+									"key": "per_page",
+									"value": "10",
+									"description": "Items per page (1 to 100)"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Pagination page number"
+								}
+							]
+						},
+						"description": "Filter couriers by multi-token name search, comma-separated levels, sorting by registered_at descending."
+					},
+					"response": []
+				},
+				{
+					"name": "5. Get Courier Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Returned courier has correct ID and fields', function () {",
+									"    const jsonData = pm.response.json();",
+									"    const targetId = pm.environment.get('created_courier_id');",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    if (targetId) {",
+									"        pm.expect(jsonData.data.id).to.eql(targetId);",
+									"    }",
+									"    pm.expect(jsonData.data).to.have.property('code');",
+									"    pm.expect(jsonData.data).to.have.property('email');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/couriers/{{created_courier_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers",
+								"{{created_courier_id}}"
+							]
+						},
+						"description": "Get details of the created courier by dynamic ID."
+					},
+					"response": []
+				},
+				{
+					"name": "6. Get Courier Detail - 404 Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 404 Not Found', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/couriers/999999",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers",
+								"999999"
+							]
+						},
+						"description": "Verifies 404 response when querying a non-existent courier ID."
+					},
+					"response": []
+				},
+				{
+					"name": "7. Update Courier",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Courier details successfully updated', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data.name).to.eql('Budiono Hadi Agung Updated');",
+									"    pm.expect(jsonData.data.level).to.eql(4);",
+									"    pm.expect(jsonData.data.vehicle_type).to.eql('car');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Budiono Hadi Agung Updated\",\n    \"level\": 4,\n    \"vehicle_type\": \"car\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/couriers/{{created_courier_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers",
+								"{{created_courier_id}}"
+							]
+						},
+						"description": "Update courier fields (supports partial update via PUT/PATCH)."
+					},
+					"response": []
+				},
+				{
+					"name": "8. Delete Courier",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Success message returned', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.eql('Courier deleted successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/couriers/{{created_courier_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers",
+								"{{created_courier_id}}"
+							]
+						},
+						"description": "Delete a courier permanently by dynamic ID."
+					},
+					"response": []
+				},
+				{
+					"name": "9. Verify Deleted Courier Returns 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 404 Not Found after deletion', function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/couriers/{{created_courier_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"couriers",
+								"{{created_courier_id}}"
+							]
+						},
+						"description": "Ensures the deleted courier can no longer be retrieved."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "created_courier_id",
+			"value": "1",
+			"type": "string"
+		}
+	]
+}
